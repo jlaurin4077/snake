@@ -1,3 +1,7 @@
+#!/usr/bin/python2
+
+
+
 import curses
 import random
 import time
@@ -12,40 +16,56 @@ def init():
     curses.curs_set(0)
     return scr
 
-def term(scr):                                      # closes cleaning when you press q or when you touch 1 away form the edge
+# closes te window cleanly
+def term(scr):   
     curses.nocbreak()
     scr.keypad(0)
     curses.echo()
     curses.endwin()
 
-def snake(postions, eat,scr):                   # it makes the snake 
+def snake(postions, eat,scr,snakelist):     
+    #earse the old snake
     scr.erase()
-    scr.addstr(postions[0] ,postions[1], " " * eat , curses.A_REVERSE)          #the eat term is so when we hit the "mouse" the line grows in size
-    scr.addch(postions[2], postions[3]," ", curses.A_REVERSE)        # spot to be eaten
+    #draw the new snake
+    for piece in snakelist:
+        scr.addch(piece[0],piece[1], " ", curses.A_REVERSE)
+
+    #scr.addstr(postions[0] ,postions[1], " " * eat , curses.A_REVERSE)
+    # draws the mouse
+    scr.addch(postions[2], postions[3]," ", curses.A_REVERSE)     
     scr.refresh 
 
-def checkkey (key,postions,ea,scr,dire):
-    if key == 113:                                                  # q to exit
+def checkkey (key,postions,dire,counter):
+    #press q to quit the game
+    if key == 113:     
         postions[4] = 1
-    elif key == 100:                                                  # moves right
+    elif key == 100: 
         dire = "right"
-    elif key == 119:                                                   # moves up
+        if counter == -1 :
+            counter += 1
+    elif key == 119: 
         dire = "up"
-    elif key == 115:                                                  # moves down
+        if counter == -1 :
+            counter += 1
+    elif key == 115: 
         dire = "down"
-    elif key == 97:                                                   # moves left
+        if counter == -1 :
+            counter += 1
+    elif key == 97:  
         dire = "left"
-    return dire 
-    
+        if counter == -1 :
+            counter += 1
+    return dire,counter 
+
 def movement(dire):
     if dire == "right":
-        mm = [1,0]
-    if dire == "left":
-        mm = [-1,0]
-    if dire == "up":
-        mm = [0,-1]
-    if dire == "down":
         mm = [0,1]
+    if dire == "left":
+        mm = [0,-1]
+    if dire == "up":
+        mm = [-1,0]
+    if dire == "down":
+        mm = [1,0]
     return mm    
 
 
@@ -55,7 +75,9 @@ def main(scr):
     dim = scr.getmaxyx() 
     maxy = dim[0]
     maxx =  dim[1]
+    counter = -1
 
+    snakelist = [[dim[0]/2, dim[1]/2 +2, "right"],[dim[0]/2, (dim[1]/2)  +1, "right"], [dim[0]/2, dim[1]/2, "right"]]
     dire = "right"
     
     #[snake y, snake x, mouse y, mouse x] sets starting postions for snake and mouse
@@ -65,25 +87,37 @@ def main(scr):
     ea = 1
 
     # creates the starting snake
-    snake(postions,ea,scr)
+    snake(postions,ea,scr,snakelist)
 
     while 1:
         key = scr.getch()         
-        time.sleep(0.3) 
-        dire = checkkey(key,postions,ea,scr,dire)
-        mm = movement(dire)
+        time.sleep(0.1) 
+        dire,counter = checkkey(key,scr,dire,counter)
         
-        postions[1] = mm[0] + postions[1]
-        postions[0] = mm[1] + postions[0]
-        snake(postions,ea,scr)
+        for piece in snakelist:
+            mm = movement(piece[2])
+            piece[0] += mm[0] 
+            piece[1] += mm[1]
+        if counter > -1 and counter < len(snakelist):
+            snakelist[counter][2] = dire
+            counter +=1
+            scr.addstr(0,0,"heelo")
+        else:
+            counter = -1
+                
+        snake(postions,ea,scr,snakelist)
 
         # quit when q is hit
         if postions[4] == 1:
             break
 
         # adds one to the string in snake when you reach the random point
-        if postions[1] == postions[3] and postions[0] == postions[2]:
-            ea +=1
+        if snakelist[0][0] == postions[2] and snakelist[0][1] == postions[3]:
+            # checks direction of the last piece to add the extra piece 
+            pieceshift = movement(snakelist[-1][2])
+            #adds the extra piece to the snake
+            snakelist.append([snakelist[-1][0] - pieceshift[0] , snakelist[-1][1] - pieceshift[1], snakelist[-1][2]]) 
+            # resets the position of the mouse
             postions[2] = random.randint(1,maxy)
             postions[3] = random.randint(1,maxx)
         
@@ -93,4 +127,6 @@ def main(scr):
 
     term(scr)
 
-main(scr)
+    
+curses.wrapper(main(scr))
+
